@@ -11,6 +11,27 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+const { requireAuth, TOKEN } = require('./middleware/auth');
+
+// Login: kiểm tra user/pass cứng
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body || {};
+    let listUser = [{
+        username: 'admin1',
+        password: '123654'
+    },
+    {
+        username: 'admin2',
+        password: '654321'
+    }]
+    const user = listUser.find(user => user.username === username && user.password === password);
+    if (user) {
+        return res.json({ success: true, token: TOKEN });
+    }
+    return res.status(401).json({ success: false, message: 'Sai tài khoản hoặc mật khẩu' });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to MongoDB
@@ -35,7 +56,8 @@ const customerSchema = new mongoose.Schema({
 
 const Customer = mongoose.model('Customer', customerSchema);
 
-// API Routes - Với phân trang
+// ✅ Chỉ bảo vệ /api/customers/*
+app.use('/api/customers', requireAuth);
 app.get('/api/customers', async (req, res) => {
     try {
         // Lấy tham số phân trang từ query string

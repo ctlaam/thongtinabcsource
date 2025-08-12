@@ -14,6 +14,7 @@ let isLoading = false;
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', () => {
+    guardAuth();
     // Khởi tạo các biến DOM
     initDOMElements();
 
@@ -27,6 +28,36 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCustomers();
 });
 
+function guardAuth() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login.html';
+        throw new Error('Not authenticated'); // chặn chạy tiếp
+    }
+    // Gắn logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        });
+    }
+}
+
+async function authFetch(url, options = {}) {
+    const token = localStorage.getItem('token');
+    options.headers = {
+        ...(options.headers || {}),
+        'Authorization': `Bearer ${token}`
+    };
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+        throw new Error('Unauthorized');
+    }
+    return res;
+}
 // Hiển thị loading spinner
 function showLoading() {
     if (isLoading) return; // Tránh hiển thị nhiều spinner
@@ -202,7 +233,7 @@ async function fetchCustomers() {
             url = `/api/customers/search?term=${searchTerm}&page=${currentPage}&limit=${itemsPerPage}`;
         }
 
-        const response = await fetch(url);
+        const response = await authFetch(url);
         const data = await response.json();
 
         if (data.success) {
@@ -413,7 +444,7 @@ async function handleFormSubmit(e) {
 
         if (isEditing) {
             // Cập nhật khách hàng
-            response = await fetch(`/api/customers/${customerId.value}`, {
+            response = await authFetch(`/api/customers/${customerId.value}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -422,7 +453,7 @@ async function handleFormSubmit(e) {
             });
         } else {
             // Thêm khách hàng mới
-            response = await fetch('/api/customers', {
+            response = await authFetch('/api/customers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -469,7 +500,7 @@ async function checkDuplicatePhone(phone) {
 
     try {
         // Gọi API kiểm tra số điện thoại đầy đủ
-        const response = await fetch(`/api/customers/check-phone?phone=${phone}`);
+        const response = await authFetch(`/api/customers/check-phone?phone=${phone}`);
         const data = await response.json();
 
         if (data.success === false && data.duplicateCustomer) {
@@ -513,7 +544,7 @@ function showDuplicatePhoneAlert(duplicateCustomer) {
 async function findAndHighlightCustomer(customerId) {
     try {
         // Tìm kiếm bản ghi theo ID
-        const response = await fetch(`/api/customers/${customerId}`);
+        const response = await authFetch(`/api/customers/${customerId}`);
         const data = await response.json();
 
         if (data.success) {
@@ -604,7 +635,7 @@ async function editCustomer(id) {
 
     showLoading();
     try {
-        const response = await fetch(`/api/customers/${id}`);
+        const response = await authFetch(`/api/customers/${id}`);
         const data = await response.json();
 
         if (data.success) {
@@ -700,7 +731,7 @@ async function checkDuplicatePhoneExceptCurrent(phone) {
         const currentId = isEditing ? window.originalCustomerId || '' : '';
 
         // Gọi API kiểm tra số điện thoại đầy đủ, truyền thêm ID hiện tại để loại trừ
-        const response = await fetch(`/api/customers/check-phone?phone=${phone}&excludeId=${currentId}`);
+        const response = await authFetch(`/api/customers/check-phone?phone=${phone}&excludeId=${currentId}`);
         const data = await response.json();
 
         if (data.success === false && data.duplicateCustomer) {
@@ -740,7 +771,7 @@ function deleteCustomer(id) {
 async function performDelete(id) {
     showLoading();
     try {
-        const response = await fetch(`/api/customers/${id}`, {
+        const response = await authFetch(`/api/customers/${id}`, {
             method: 'DELETE'
         });
 
@@ -830,8 +861,7 @@ function formatTime(timeString) {
 // Hàm để xuất dữ liệu ra Excel
 function exportToExcel() {
     showLoading();
-
-    fetch('/api/customers/all')
+    authFetch('/api/customers/all')
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data.length > 0) {
