@@ -201,7 +201,19 @@ app.get('/api/customers/search', async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
-
+// Lấy chi tiết khách hàng theo ID
+app.get('/api/customers/:id', async (req, res) => {
+    try {
+        const customer = await Customer.findById(req.params.id);
+        if (!customer) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
+        }
+        res.json({ success: true, data: customer });
+    } catch (error) {
+        console.error('Error fetching customer by id:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
 // Cập nhật thông tin khách hàng
 app.put('/api/customers/:id', async (req, res) => {
     try {
@@ -249,24 +261,24 @@ app.put('/api/customers/:id', async (req, res) => {
     }
 });
 
-// Cập nhật thông tin khách hàng
-app.put('/api/customers/:id', async (req, res) => {
-    try {
-        const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true
-        });
+// // Cập nhật thông tin khách hàng
+// app.put('/api/customers/:id', async (req, res) => {
+//     try {
+//         const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
+//             new: true,
+//             runValidators: true
+//         });
 
-        if (!customer) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
-        }
+//         if (!customer) {
+//             return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
+//         }
 
-        res.json({ success: true, data: customer });
-    } catch (error) {
-        console.error('Error updating customer:', error);
-        res.status(500).json({ success: false, message: 'Lỗi server' });
-    }
-});
+//         res.json({ success: true, data: customer });
+//     } catch (error) {
+//         console.error('Error updating customer:', error);
+//         res.status(500).json({ success: false, message: 'Lỗi server' });
+//     }
+// });
 
 // Xóa khách hàng
 app.delete('/api/customers/:id', async (req, res) => {
